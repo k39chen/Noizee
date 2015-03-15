@@ -1,3 +1,4 @@
+/*
 $(window).on("load", function() {
     var context = new AudioContext();
     var analyser = context.createAnalyser();
@@ -12,3 +13,4 @@ $(window).on("load", function() {
     source.connect(analyser);
     analyser.connect(context.destination);
 });
+*/

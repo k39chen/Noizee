@@ -1,26 +1,8 @@
-@import "main/_reset";
-@import "main/_colors";
-@import "main/_fonts";
+@import "vendor/_compass";
 
-html {
-    background-color: $black;
-    color: $white;
-    font-family: "HelveticaNeueLt", Arial, sans-serif;
-    font-size: 16px;
-    padding: 24px;
+@import "base/_reset";
+@import "base/_colors";
+@import "base/_fonts";
+@import "base/_main";
 
-    b {
-        font-family: "HelveticaNeue";
-    }
-}
-h1 {
-    font-size: 3.0em;
-}
-
-
-.hero {
-    font-family: "HelveticaNeueUltLt";
-}
-.subhero {
-    color: $gray;
-}
+@import "modules/_sidebar";
