@@ -1,0 +1,26 @@
+@import "main/_reset";
+@import "main/_colors";
+@import "main/_fonts";
+
+html {
+    background-color: $black;
+    color: $white;
+    font-family: "HelveticaNeueLt", Arial, sans-serif;
+    font-size: 16px;
+    padding: 24px;
+
+    b {
+        font-family: "HelveticaNeue";
+    }
+}
+h1 {
+    font-size: 3.0em;
+}
+
+
+.hero {
+    font-family: "HelveticaNeueUltLt";
+}
+.subhero {
+    color: $gray;
+}
