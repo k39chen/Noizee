@@ -7,4 +7,5 @@
 meteor-platform
 autopublish
 insecure
-particle4dev:sass
+fourseven:scss
+francocatena:compass
