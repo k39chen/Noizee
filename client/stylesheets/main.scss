@@ -5,4 +5,5 @@
 @import "base/_fonts";
 @import "base/_main";
 
-@import "modules/_sidebar";
+@import "../modules/Sidebar/_sidebar";
+@import "../modules/Visualizer/_visualizer";
