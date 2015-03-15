@@ -1,4 +1,7 @@
-var NUM_BARS = 64;
+var NUM_DATA_POINTS = 1024;
+var SMOOTHING_CONSTANT = 0.5;
+var MIN_DECIBELS = -90;
+var MAX_DECIBELS = 10;
 
 /**
  * The visualizer controller. Manages any of the actions that are
@@ -13,7 +16,7 @@ window.Visualizer = function(options) {
     // merge it with user-provided options.
     this.options = $.extend({
         audioFilePath: null,
-        numBars: NUM_BARS,
+        numDataPoints: NUM_DATA_POINTS,
         context: null,
         backgroundColor: "#444",
         barColor: "#37CCDF"
@@ -25,6 +28,7 @@ window.Visualizer = function(options) {
 
     // initialize the size of the canvas
     self.handleResize();
+    $(window).resize($.proxy(self.handleResize,self));
 
     // initialize the initial audio file (if provided)
     if (!_.isEmpty(self.options.audioFilePath)) {
@@ -45,6 +49,7 @@ Visualizer.prototype.initAudio = function() {
     // create the audio object
     var audio = new Audio();
     audio.src = self.options.audioFilePath;
+    audio.controls = true;
 
     // connect the audio object to an analyzer
     var source = context.createMediaElementSource(audio);
@@ -52,7 +57,10 @@ Visualizer.prototype.initAudio = function() {
     analyser.connect(context.destination);
 
     // configure for the number of bars to produce
-    analyser.fftSize = self.options.numBars * 2;
+    analyser.fftSize = self.options.numDataPoints * 2;
+    analyser.minDecibels = MIN_DECIBELS;
+    analyser.maxDecibels = MAX_DECIBELS;
+    analyser.smoothingTimeConstant = SMOOTHING_CONSTANT;
 
     // create a bucket for the frequency data as the analyser
     // does its work.
@@ -66,8 +74,9 @@ Visualizer.prototype.initAudio = function() {
         // use this frequency data to render the visualizer
         self.renderFrequencyData(frequencyData);
     }
-    // $(audio).trigger("play");
-    // renderFrame();
+    $(audio).appendTo("body");
+    $(audio).trigger("play");
+    renderFrame();
 };
 /**
  * Renders the visualizer with tthe provided frequency data.
@@ -80,22 +89,21 @@ Visualizer.prototype.renderFrequencyData = function(data) {
     var context = self.options.context;
     var width = self.element.width;
     var height = self.element.height;
-    var barWidth = width / data.length;
+    var barWidth = width / data.length * 2.5;
     var barHeight;
     var barOffset = 0;
-
-    console.log(barWidth);
 
     context.fillStyle = self.options.backgroundColor;
     context.fillRect(0,0,width,height);
 
     _.each(data, function(datum) {
-        barHeight = datum / 2;
+        barHeight = datum * 2;
 
-
+        // draw the bar
         context.fillStyle = self.options.barColor;
-        context.fillRect(barOffset, height - barHeight/2, barWidth, barHeight);
+        context.fillRect(barOffset, height * 0.5 - barHeight * 0.75, barWidth, barHeight);
 
+        // compute the offset appropriately
         barOffset = barOffset + barWidth + 4;
     });
 };
