@@ -21,28 +21,34 @@ window.Visualizer = function(options) {
         backgroundColor: "#444",
         themeColor: "#37CCDF",
 
-        // tracks configuration and data changes for the frequency analyser
-        frequencyAnalyser: null,
-        frequencyData: null,
-        frequencyConfig: {
-            fftSize: 2048,
-            smoothingTimeConstant: 0.80,
-            minDecibels: -90,
-            maxDecibels: 10  
-        },
-        // tracks configuration and data changes for the first channel volume analyser
-        volume1Analyser: null,
-        volume1Data: null,
-        volume1Config: {
-            fftSize: 2048,
-            smoothingTimeConstant: 0.9
-        },
-        // tracks configuration and data changes for the second channel volume analyser
-        volume2Analyser: null,
-        volume2Data: null,
-        volume2Config: {
-            fftSize: 256,
-            smoothingTimeConstant: 0.8
+        // tracks configuration and data changes for the registered frequency analyser
+        analysers: {
+            frequency: {
+                analyser: null,
+                data: null,
+                config: {
+                    fftSize: 2048,
+                    smoothingTimeConstant: 0.8,
+                    minDecibels: -90,
+                    maxDecibels: 10
+                }
+            },
+            volume1: {
+                analyser: null,
+                data: null,
+                config: {
+                    fftSize: 2048,
+                    smoothingTimeConstant: 0.8
+                }
+            },
+            volume2: {
+                analyser: null,
+                data: null,
+                config: {
+                    fftSize: 256,
+                    smoothingTimeConstant: 0.9
+                }
+            }
         }
     }, options);
 
@@ -106,17 +112,14 @@ Visualizer.prototype.attachAnalysers = function(mediaElement) {
     self.initAnalyzer("volume2",context);
 
     // connect the frequency analyser to the source
-    source.connect(self.options.frequencyAnalyser);
+    source.connect(self.options.analysers.frequency.analyser);
     
     // connect our split volume analyser to the source
     var splitter = context.createChannelSplitter();
     source.connect(splitter);
-    splitter.connect(self.options.volume1Analyser,0,0);
-    splitter.connect(self.options.volume2Analyser,1,0);
+    splitter.connect(self.options.analysers.volume1.analyser,0,0);
+    splitter.connect(self.options.analysers.volume2.analyser,1,0);
     
-    
-
-
     // connect our source to the audio context destination
     source.connect(context.destination);
 
@@ -139,10 +142,10 @@ Visualizer.prototype.initAnalyzer = function(type,context) {
     var analyser = context.createAnalyser();
 
     // update our remote reference to the audio analyser
-    self.options[type+"Analyser"] = analyser;
+    self.options.analysers[type].analyser = analyser;
 
     // apply the initial configuration for the analyser
-    self.configureAnalyser(type,self.options[type+"Config"]);
+    self.configureAnalyser(type,self.options.analysers[type].config);
 };
 /**
  * Changes the analyser based on the provided object.
@@ -153,8 +156,8 @@ Visualizer.prototype.initAnalyzer = function(type,context) {
  */
 Visualizer.prototype.configureAnalyser = function(type,config) {
     var self = this;
-    var analyser = self.options[type+"Analyser"];
-    var analyserConfig = self.options[type+"Config"];
+    var analyser = self.options.analysers[type].analyser;
+    var analyserConfig = self.options.analysers[type].config;
 
     // based on the specific kind of configuration, we'll have to
     // modify the analyser in a different way.
@@ -162,7 +165,7 @@ Visualizer.prototype.configureAnalyser = function(type,config) {
         switch (name) {
         case "fftSize":
             analyser.fftSize = value;
-            self.options[type+"Data"] = new Uint8Array(analyser.frequencyBinCount);
+            self.options.analysers[type].data = new Uint8Array(analyser.frequencyBinCount);
             break;
         case "smoothingTimeConstant":
             /* falls through */
@@ -188,20 +191,20 @@ Visualizer.prototype.updateAnalyserData = function() {
     var self = this;
     
     // get our relevent analysers
-    var frequencyAnalyser = self.options.frequencyAnalyser;
-    var volume1Analyser = self.options.volume1Analyser;
-    var volume2Analyser = self.options.volume2Analyser;
+    var frequencyAnalyser = self.options.analysers.frequency.analyser;
+    var volume1Analyser = self.options.analysers.volume1.analyser;
+    var volume2Analyser = self.options.analysers.volume2.analyser;
 
     // compute the appropriate data to use
-    frequencyAnalyser.getByteFrequencyData(self.options.frequencyData);
-    volume1Analyser.getByteFrequencyData(self.options.volume1Data);
-    volume2Analyser.getByteFrequencyData(self.options.volume2Data);
+    frequencyAnalyser.getByteFrequencyData(self.options.analysers.frequency.data);
+    volume1Analyser.getByteFrequencyData(self.options.analysers.volume1.data);
+    volume2Analyser.getByteFrequencyData(self.options.analysers.volume2.data);
 
     // use this frequency data to render the visualizer
     self.renderVisualization(
-        self.options.frequencyData,
-        self.computeAverageVolume(self.options.volume1Data),
-        self.computeAverageVolume(self.options.volume2Data)
+        self.options.analysers.frequency.data,
+        self.computeAverageVolume(self.options.analysers.volume1.data),
+        self.computeAverageVolume(self.options.analysers.volume2.data)
     );
     // update the our analyser data on the specified interval
     requestAnimationFrame(function() {
