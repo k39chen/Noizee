@@ -20,14 +20,30 @@ window.Visualizer = function(options) {
         canvas: null,
         backgroundColor: "#444",
         themeColor: "#37CCDF",
-        analyserConfig: {
-            numDataPoints: 1024,
+
+        // tracks configuration and data changes for the frequency analyser
+        frequencyAnalyser: null,
+        frequencyData: null,
+        frequencyConfig: {
+            fftSize: 2048,
             smoothingTimeConstant: 0.80,
             minDecibels: -90,
             maxDecibels: 10  
         },
-        _analyser: null,
-        _frequencyData: null
+        // tracks configuration and data changes for the first channel volume analyser
+        volume1Analyser: null,
+        volume1Data: null,
+        volume1Config: {
+            fftSize: 2048,
+            smoothingTimeConstant: 0.9
+        },
+        // tracks configuration and data changes for the second channel volume analyser
+        volume2Analyser: null,
+        volume2Data: null,
+        volume2Config: {
+            fftSize: 256,
+            smoothingTimeConstant: 0.8
+        }
     }, options);
 
     // assign the visualizer element
@@ -46,7 +62,7 @@ window.Visualizer = function(options) {
             var info = self.options.ytInfo[videoId];
             var video = $("#video").get(0);
             video.src = info.url;
-            self.attachAnalyser(video);
+            self.attachAnalysers(video);
         });
     }
     function testSoundCloud() {
@@ -57,105 +73,150 @@ window.Visualizer = function(options) {
             var info = self.options.scInfo[trackId];
             var audio = $("#audio").get(0);
             audio.src = info.url;
-            self.attachAnalyser(audio);
+            self.attachAnalysers(audio);
         });
     }
     function testAudio() {
         var audio = $("#audio").get(0);
         audio.src = "resources/audio/Squirly Girl.mp3";
-        self.attachAnalyser(audio);
+        self.attachAnalysers(audio);
     }
-    testYouTube();
+    //testYouTube();
     //testSoundCloud();
-    //testAudio();
+    testAudio();
 };
 /*========================================================================*
- * ANALYSER BOOTSTRAP, RENDERING, AND CONFIGURATION
+ * ANALYSER BOOTSTRAP
  *========================================================================*/
 /**
- * Initializes the the provided audio file.
+ * Initializes the the provided audio or video element with the appropriate
+ * analysers in order to achieve an awesome looking visualization.
  *
- * @method attachAnalyser
+ * @method attachAnalysers
  * @param mediaElement {Object} Either a video or audio element.
  */
-Visualizer.prototype.attachAnalyser = function(mediaElement) {
+Visualizer.prototype.attachAnalysers = function(mediaElement) {
     var self = this;
     var context = new AudioContext();
+    var source = context.createMediaElementSource(mediaElement);
+
+    // initialize the frequency analyzer
+    self.initAnalyzer("frequency",context);
+    self.initAnalyzer("volume1",context);
+    self.initAnalyzer("volume2",context);
+
+    // connect the frequency analyser to the source
+    source.connect(self.options.frequencyAnalyser);
+    
+    // connect our split volume analyser to the source
+    var splitter = context.createChannelSplitter();
+    source.connect(splitter);
+    splitter.connect(self.options.volume1Analyser,0,0);
+    splitter.connect(self.options.volume2Analyser,1,0);
+    
+    
+
+
+    // connect our source to the audio context destination
+    source.connect(context.destination);
+
+    // kick off the analysing and start the media playing
+    self.updateAnalyserData();
+    mediaElement.play();
+};
+/**
+ * Creates and configures a single analyser provided the type and the
+ * audio context.
+ *
+ * @method initAnalyzer
+ * @param type {String} Either `frequency` or `volume1` or `volume2`.
+ * @param context {Object} The audio context object.
+ */
+Visualizer.prototype.initAnalyzer = function(type,context) {
+    var self = this;
+
+    // create the analyser
     var analyser = context.createAnalyser();
 
-    // connect the audio object to an analyzer
-    var source = context.createMediaElementSource(mediaElement);
-    source.connect(analyser);
-    analyser.connect(context.destination);
-
     // update our remote reference to the audio analyser
-    self.options._analyser = analyser;
+    self.options[type+"Analyser"] = analyser;
 
     // apply the initial configuration for the analyser
-    self.configureAnalyser(self.options.analyserConfig);
-
-    // create an interval listener to render the frame
-    self.updateFrequencyData();
-    mediaElement.play();
+    self.configureAnalyser(type,self.options[type+"Config"]);
 };
 /**
  * Changes the analyser based on the provided object.
  *
  * @method configureAnalyser
+ * @param type {String} Either `frequency` or `volume1` or `volume2`.
  * @param config {Object} The set of configuration changes.
  */
-Visualizer.prototype.configureAnalyser = function(config) {
+Visualizer.prototype.configureAnalyser = function(type,config) {
     var self = this;
-    var analyser = self.options._analyser;
+    var analyser = self.options[type+"Analyser"];
+    var analyserConfig = self.options[type+"Config"];
 
     // based on the specific kind of configuration, we'll have to
     // modify the analyser in a different way.
     _.each(config, function(value, name) {
         switch (name) {
-        case "numDataPoints":
-            analyser.fftSize = value * 2;
-            self.options._frequencyData = new Uint8Array(analyser.frequencyBinCount);
+        case "fftSize":
+            analyser.fftSize = value;
+            self.options[type+"Data"] = new Uint8Array(analyser.frequencyBinCount);
             break;
         case "smoothingTimeConstant":
             /* falls through */
         case "minDecibels":
             /* falls through */
         case "maxDecibels":
-            analyser[name] = value
+            analyser[name] = value;
             break;
         }
     });
     // update our reference to the current analyser configuration
-    $.extend(self.options.analyserConfig, config);
+    $.extend(analyserConfig, config);
 };
+/*========================================================================*
+ * ANALYSER RENDERING
+ *========================================================================*/
 /**
  * Updates the frequency data provided from the audio analyser.
  *
- * @method updateFrequencyData
+ * @method updateAnalyserData
  */
-Visualizer.prototype.updateFrequencyData = function() {
+Visualizer.prototype.updateAnalyserData = function() {
     var self = this;
-    var analyser = self.options._analyser;
-    var frequencyData = self.options._frequencyData;
-    var averageVolume = self.computeAverageVolume(frequencyData);
+    
+    // get our relevent analysers
+    var frequencyAnalyser = self.options.frequencyAnalyser;
+    var volume1Analyser = self.options.volume1Analyser;
+    var volume2Analyser = self.options.volume2Analyser;
 
-    // update the frequency data based on what the analyser delivers
-    requestAnimationFrame(function() {
-        self.updateFrequencyData();
-    });
-    analyser.getByteFrequencyData(frequencyData);
+    // compute the appropriate data to use
+    frequencyAnalyser.getByteFrequencyData(self.options.frequencyData);
+    volume1Analyser.getByteFrequencyData(self.options.volume1Data);
+    volume2Analyser.getByteFrequencyData(self.options.volume2Data);
 
     // use this frequency data to render the visualizer
-    self.renderVisualization(frequencyData, averageVolume);
+    self.renderVisualization(
+        self.options.frequencyData,
+        self.computeAverageVolume(self.options.volume1Data),
+        self.computeAverageVolume(self.options.volume2Data)
+    );
+    // update the our analyser data on the specified interval
+    requestAnimationFrame(function() {
+        self.updateAnalyserData();
+    });
 };
 /**
  * Renders the visualization.
  *
  * @method renderVisualization
- * @param data {Array} The list of frequency data to render.
- * @param averageVolume {Number} The average volume.
+ * @param frequencyData {Array} The list of frequency data to render.
+ * @param volume1 {Number} The average volume in the first channel.
+ * @param volume2 {Number} The average volume in the second channel.
  */
-Visualizer.prototype.renderVisualization = function(data, averageVolume) {
+Visualizer.prototype.renderVisualization = function(frequencyData, volume1, volume2) {
     var self = this;
     var canvas = self.options.canvas;
     var width = self.element.width;
@@ -166,28 +227,29 @@ Visualizer.prototype.renderVisualization = function(data, averageVolume) {
     canvas.fillRect(0,0,width,height);
 
     // render the frequency data
-    self.renderFrequencyData(data);
+    self.renderFrequencyData(frequencyData);
 
     // render the volume data
-    self.renderVolumeData(averageVolume);
+    self.renderVolumeData(volume1);
+    self.renderVolumeData(volume2);
 };
 /**
  * Renders the visualizer with the provided frequency data.
  *
  * @method renderFrequencyData
- * @param data {Array} The list of frequency data to render.
+ * @param frequencyData {Array} The list of frequency data to render.
  */
-Visualizer.prototype.renderFrequencyData = function(data) {
+Visualizer.prototype.renderFrequencyData = function(frequencyData) {
     var self = this;
     var canvas = self.options.canvas;
     var width = self.element.width;
     var height = self.element.height;
-    var barWidth = width / data.length * 2.5;
+    var barWidth = width / frequencyData.length * 2.5;
     var barHeight;
     var barOffset = 0;
 
     // draw the frequency spectrum
-    _.each(data, function(datum) {
+    _.each(frequencyData, function(datum) {
         barHeight = datum;
 
         // draw the bar
@@ -202,14 +264,14 @@ Visualizer.prototype.renderFrequencyData = function(data) {
  * Renders the volume data.
  *
  * @method renderVolumeData
- * @param averageVolume {Number} The average volume.
+ * @param volume {Number} The average volume.
  */
-Visualizer.prototype.renderVolumeData = function(averageVolume) {
+Visualizer.prototype.renderVolumeData = function(volume) {
     var self = this;
     var canvas = self.options.canvas;
     var width = self.element.width;
     var height = self.element.height;
-    var radius = averageVolume / 2;
+    var radius = volume / 2;
 
     // draw the volume reactor
     canvas.beginPath();
@@ -217,20 +279,6 @@ Visualizer.prototype.renderVolumeData = function(averageVolume) {
     canvas.lineWidth = 2;
     canvas.strokeStyle = self.options.themeColor;
     canvas.stroke();
-};
-/**
- * Computes the average length at any give frame, provided the list
- * of frequency data.
- *
- * @method computeAverageVolume
- * @param data {Array} The list of frequency data.
- * @return {Number} The computed average volume.
- */
-Visualizer.prototype.computeAverageVolume = function(data) {
-    var self = this;
-    var sum = _.foldr(data, function(d1,d2) { return d1 + d2; });
-    var avg = sum / data.length;
-    return avg;
 };
 /*========================================================================*
  * THIRD PARTY DATA FETCHING
@@ -344,6 +392,20 @@ Visualizer.prototype.getSoundCloudAudio = function(url) {
 /*========================================================================*
  * HELPERS
  *========================================================================*/
+/**
+ * Computes the average length at any give frame, provided the list
+ * of frequency data.
+ *
+ * @method computeAverageVolume
+ * @param data {Array} The list of frequency data.
+ * @return {Number} The computed average volume.
+ */
+Visualizer.prototype.computeAverageVolume = function(data) {
+    var self = this;
+    var sum = _.foldr(data, function(d1,d2) { return d1 + d2; });
+    var avg = sum / data.length;
+    return avg;
+};
 /**
  * Handles a window resize.
  *
