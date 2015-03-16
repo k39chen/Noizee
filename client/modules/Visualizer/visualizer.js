@@ -1,10 +1,7 @@
-var NUM_DATA_POINTS = 1024;
-var SMOOTHING_CONSTANT = 0.80;
-var MIN_DECIBELS = -90;
-var MAX_DECIBELS = 10;
 var SC_CLIENT_ID = "09af4ac81403d0e0b85d7edd30a4fd57";
 
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
+window.requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame;
 
 /**
  * The visualizer controller. Manages any of the actions that are
@@ -20,39 +17,47 @@ window.Visualizer = function(options) {
     self.options = $.extend({
         ytInfo: {},
         scInfo: {},
-        numDataPoints: NUM_DATA_POINTS,
-        context: null,
+        canvas: null,
         backgroundColor: "#444",
-        barColor: "#37CCDF"
+        themeColor: "#37CCDF",
+        analyserConfig: {
+            numDataPoints: 1024,
+            smoothingTimeConstant: 0.80,
+            minDecibels: -90,
+            maxDecibels: 10  
+        },
+        _analyser: null,
+        _frequencyData: null
     }, options);
 
     // assign the visualizer element
     self.element = $("#visualizer").get(0);
-    self.options.context = self.element.getContext("2d");
+    self.options.canvas = self.element.getContext("2d");
 
     // initialize the size of the canvas
     self.handleResize();
     $(window).resize($.proxy(self.handleResize,self));
 
-
     function testYouTube() {
         var url = "https://www.youtube.com/watch?v=d01XRSB-7dA";
-
         $.when(
             self.getYouTubeVideo(url)
         ).then(function(videoId) {
             var info = self.options.ytInfo[videoId];
-            self.attachAnalyser(info.media);
+            var video = $("#video").get(0);
+            video.src = info.url;
+            self.attachAnalyser(video);
         });
     }
     function testSoundCloud() {
         var url = "https://soundcloud.com/nightcorereality3/nightstep-coming-home";
-
         $.when(
             self.getSoundCloudAudio(url)
         ).then(function(trackId) {
             var info = self.options.scInfo[trackId];
-            self.attachAnalyser(info.media);
+            var audio = $("#audio").get(0);
+            audio.src = info.url;
+            self.attachAnalyser(audio);
         });
     }
     function testAudio() {
@@ -60,15 +65,18 @@ window.Visualizer = function(options) {
         audio.src = "resources/audio/Squirly Girl.mp3";
         self.attachAnalyser(audio);
     }
-    //testYouTube();
+    testYouTube();
     //testSoundCloud();
-    testAudio();
+    //testAudio();
 };
+/*========================================================================*
+ * ANALYSER BOOTSTRAP, RENDERING, AND CONFIGURATION
+ *========================================================================*/
 /**
  * Initializes the the provided audio file.
  *
- * @method initAudio
- * @return {[type]} [description]
+ * @method attachAnalyser
+ * @param mediaElement {Object} Either a video or audio element.
  */
 Visualizer.prototype.attachAnalyser = function(mediaElement) {
     var self = this;
@@ -80,75 +88,153 @@ Visualizer.prototype.attachAnalyser = function(mediaElement) {
     source.connect(analyser);
     analyser.connect(context.destination);
 
-    // configure for the number of bars to produce
-    analyser.fftSize = self.options.numDataPoints * 2;
-    analyser.minDecibels = MIN_DECIBELS;
-    analyser.maxDecibels = MAX_DECIBELS;
-    analyser.smoothingTimeConstant = SMOOTHING_CONSTANT;
+    // update our remote reference to the audio analyser
+    self.options._analyser = analyser;
 
-    // create a bucket for the frequency data as the analyser
-    // does its work.
-    var frequencyData = new Uint8Array(analyser.frequencyBinCount);
-
-    // set number of bars
-    setTimeout(function() {
-        console.log("here?");
-        analyser.fftSize = 256 * 2;
-        frequencyData = new Uint8Array(analyser.frequencyBinCount);
-    }, 4000);
+    // apply the initial configuration for the analyser
+    self.configureAnalyser(self.options.analyserConfig);
 
     // create an interval listener to render the frame
-    function renderFrame() {
-        requestAnimationFrame(renderFrame);
-        analyser.getByteFrequencyData(frequencyData);
-
-        // use this frequency data to render the visualizer
-        self.renderFrequencyData(frequencyData);
-    }
-    renderFrame();
+    self.updateFrequencyData();
     mediaElement.play();
 };
 /**
- * Renders the visualizer with tthe provided frequency data.
+ * Changes the analyser based on the provided object.
+ *
+ * @method configureAnalyser
+ * @param config {Object} The set of configuration changes.
+ */
+Visualizer.prototype.configureAnalyser = function(config) {
+    var self = this;
+    var analyser = self.options._analyser;
+
+    // based on the specific kind of configuration, we'll have to
+    // modify the analyser in a different way.
+    _.each(config, function(value, name) {
+        switch (name) {
+        case "numDataPoints":
+            analyser.fftSize = value * 2;
+            self.options._frequencyData = new Uint8Array(analyser.frequencyBinCount);
+            break;
+        case "smoothingTimeConstant":
+            /* falls through */
+        case "minDecibels":
+            /* falls through */
+        case "maxDecibels":
+            analyser[name] = value
+            break;
+        }
+    });
+    // update our reference to the current analyser configuration
+    $.extend(self.options.analyserConfig, config);
+};
+/**
+ * Updates the frequency data provided from the audio analyser.
+ *
+ * @method updateFrequencyData
+ */
+Visualizer.prototype.updateFrequencyData = function() {
+    var self = this;
+    var analyser = self.options._analyser;
+    var frequencyData = self.options._frequencyData;
+    var averageVolume = self.computeAverageVolume(frequencyData);
+
+    // update the frequency data based on what the analyser delivers
+    requestAnimationFrame(function() {
+        self.updateFrequencyData();
+    });
+    analyser.getByteFrequencyData(frequencyData);
+
+    // use this frequency data to render the visualizer
+    self.renderVisualization(frequencyData, averageVolume);
+};
+/**
+ * Renders the visualization.
+ *
+ * @method renderVisualization
+ * @param data {Array} The list of frequency data to render.
+ * @param averageVolume {Number} The average volume.
+ */
+Visualizer.prototype.renderVisualization = function(data, averageVolume) {
+    var self = this;
+    var canvas = self.options.canvas;
+    var width = self.element.width;
+    var height = self.element.height;
+
+    // clear the canvas
+    canvas.fillStyle = self.options.backgroundColor;
+    canvas.fillRect(0,0,width,height);
+
+    // render the frequency data
+    self.renderFrequencyData(data);
+
+    // render the volume data
+    self.renderVolumeData(averageVolume);
+};
+/**
+ * Renders the visualizer with the provided frequency data.
  *
  * @method renderFrequencyData
  * @param data {Array} The list of frequency data to render.
  */
 Visualizer.prototype.renderFrequencyData = function(data) {
     var self = this;
-    var context = self.options.context;
+    var canvas = self.options.canvas;
     var width = self.element.width;
     var height = self.element.height;
     var barWidth = width / data.length * 2.5;
     var barHeight;
     var barOffset = 0;
 
-    context.fillStyle = self.options.backgroundColor;
-    context.fillRect(0,0,width,height);
-
+    // draw the frequency spectrum
     _.each(data, function(datum) {
         barHeight = datum;
 
         // draw the bar
-        context.fillStyle = self.options.barColor;
-        context.fillRect(barOffset, height * 0.5 - barHeight * 0.75, barWidth, barHeight);
+        canvas.fillStyle = self.options.themeColor;
+        canvas.fillRect(barOffset, height * 0.5 - barHeight * 0.75, barWidth, barHeight);
 
         // compute the offset appropriately
         barOffset = barOffset + barWidth + 4;
     });
 };
 /**
- * Handles a window resize.
+ * Renders the volume data.
  *
- * @method handleResize
+ * @method renderVolumeData
+ * @param averageVolume {Number} The average volume.
  */
-Visualizer.prototype.handleResize = function() {
+Visualizer.prototype.renderVolumeData = function(averageVolume) {
     var self = this;
+    var canvas = self.options.canvas;
+    var width = self.element.width;
+    var height = self.element.height;
+    var radius = averageVolume / 2;
 
-    // update the width of the canvas
-    self.element.width = $(window).width();
-    self.element.height = $(window).height();
+    // draw the volume reactor
+    canvas.beginPath();
+    canvas.arc(width/2, height*0.25, radius, 0, 2 * Math.PI, false);
+    canvas.lineWidth = 2;
+    canvas.strokeStyle = self.options.themeColor;
+    canvas.stroke();
 };
+/**
+ * Computes the average length at any give frame, provided the list
+ * of frequency data.
+ *
+ * @method computeAverageVolume
+ * @param data {Array} The list of frequency data.
+ * @return {Number} The computed average volume.
+ */
+Visualizer.prototype.computeAverageVolume = function(data) {
+    var self = this;
+    var sum = _.foldr(data, function(d1,d2) { return d1 + d2; });
+    var avg = sum / data.length;
+    return avg;
+};
+/*========================================================================*
+ * THIRD PARTY DATA FETCHING
+ *========================================================================*/
 /**
  * Gets the video ID from the YouTube url.
  *
@@ -175,14 +261,9 @@ Visualizer.prototype.getYouTubeVideoId = function(url) {
 Visualizer.prototype.getYouTubeVideo = function(url) {
     var self = this;
     var $dfd = new $.Deferred();
-    var video = $("#video").get(0);
     var isYoutube = url && url.match(/(?:youtu|youtube)(?:\.com|\.be)\/([\w\W]+)/i);
     var id = self.getYouTubeVideoId(url);
 
-    // if this is a valid youtube url, then let's defer the the conversion.
-    if (isYoutube) {
-        video.src = "http://www.youtubeinmp4.com/redirect.php?video="+id;
-    }
     // now we will get the video information.
     $.when (
         $.ajax({
@@ -202,7 +283,8 @@ Visualizer.prototype.getYouTubeVideo = function(url) {
                 title: title,
                 author: author,
                 thumbnail: thumbnail,
-                media: video
+                type: "video",
+                url: "http://www.youtubeinmp4.com/redirect.php?video="+id
             };
             // resolve the deferred
             $dfd.resolve(id);
@@ -229,7 +311,6 @@ Visualizer.prototype.getYouTubeVideo = function(url) {
 Visualizer.prototype.getSoundCloudAudio = function(url) {
     var self = this;
     var $dfd = new $.Deferred();
-    var audio = $("#audio").get(0);
     var requestUrl = "https://api.soundcloud.com/resolve.json?url="+url+"&client_id="+SC_CLIENT_ID;
 
     // now we will get the audio information.
@@ -241,15 +322,13 @@ Visualizer.prototype.getSoundCloudAudio = function(url) {
         })
     ).done(
         $.proxy(function(data, textStatus) {
-            // update the audio source
-            audio.src = "https://api.soundcloud.com/tracks/"+data.id+"/stream?client_id="+SC_CLIENT_ID;
-
             // store the audio information
             self.options.scInfo[data.id] = {
                 title: data.title,
                 author: data.user.username,
                 thumbnail: data.artwork_url,
-                media: audio
+                type: "audio",
+                url: "https://api.soundcloud.com/tracks/"+data.id+"/stream?client_id="+SC_CLIENT_ID
             };
             // resolve the deferred
             $dfd.resolve(data.id);
@@ -261,4 +340,19 @@ Visualizer.prototype.getSoundCloudAudio = function(url) {
         }, self)
     );
     return $dfd.promise();
+};
+/*========================================================================*
+ * HELPERS
+ *========================================================================*/
+/**
+ * Handles a window resize.
+ *
+ * @method handleResize
+ */
+Visualizer.prototype.handleResize = function() {
+    var self = this;
+
+    // update the width of the canvas
+    self.element.width = $(window).width();
+    self.element.height = $(window).height();
 };
