@@ -18,7 +18,8 @@ window.Visualizer = function(options) {
     // create an initial set of options and then subsequently
     // merge it with user-provided options.
     self.options = $.extend({
-        videoInfo: {},
+        ytInfo: {},
+        scInfo: {},
         numDataPoints: NUM_DATA_POINTS,
         context: null,
         backgroundColor: "#444",
@@ -36,21 +37,30 @@ window.Visualizer = function(options) {
 
     function testYouTube() {
         var url = "https://www.youtube.com/watch?v=d01XRSB-7dA";
-        var videoId = self.getYouTubeVideoId(url);
 
         $.when(
-            self.getVideo(url)
-        ).then(function() {
-            var info = self.options.videoInfo[videoId];
-            self.attachAnalyser(info.video);
+            self.getYouTubeVideo(url)
+        ).then(function(videoId) {
+            var info = self.options.ytInfo[videoId];
+            self.attachAnalyser(info.media);
         });
     }
     function testSoundCloud() {
+        var url = "https://soundcloud.com/nightcorereality3/nightstep-coming-home";
+
+        $.when(
+            self.getSoundCloudAudio(url)
+        ).then(function(trackId) {
+            var info = self.options.scInfo[trackId];
+            self.attachAnalyser(info.media);
+        });
+        /*
         var audio = $("#audio").get(0);
         audio.src = "https://api.soundcloud.com/tracks/169508644/stream?client_id=09af4ac81403d0e0b85d7edd30a4fd57";
         self.attachAnalyser(audio);
+        */
     }
-    //testVideo();
+    //testYouTube();
     testSoundCloud();
 };
 /**
@@ -150,7 +160,7 @@ Visualizer.prototype.getYouTubeVideoId = function(url) {
  * MP4 using a third-party service, then retrieve its title/author/thumbnail as a
  * returned result.
  *
- * @method getVideo
+ * @method getYouTubeVideo
  * @param url {String} The complete YouTube URL.
  * @return {Deferred} The promise for when all the required data is loaded.
  */
@@ -179,23 +189,66 @@ Visualizer.prototype.getYouTubeVideo = function(url) {
             var thumbnail = "http://img.youtube.com/vi/"+id+"/mqdefault.jpg";
 
             // store the video information
-            self.options.videoInfo[id] = {
+            self.options.ytInfo[id] = {
                 title: title,
                 author: author,
                 thumbnail: thumbnail,
-                video: video
+                media: video
             };
             // resolve the deferred
-            $dfd.resolve();
+            $dfd.resolve(id);
         }, self, id)
     ).fail(
         $.proxy(function(id) {
             // invalidate the video info object.
-            self.options.videoInfo[id] = null;
+            self.options.ytInfo[id] = null;
 
             // resolve the deferred
-            $dfd.resolve();
+            $dfd.resolve(id);
         }, self, id)
+    );
+    return $dfd.promise();
+};
+/**
+ * This will get a SoundCloud mp3, based on a given URL, then retrieve its
+ * title/author/thumbnail as a returned result.
+ *
+ * @method getVideo
+ * @param url {String} The complete SoundCloud URL.
+ * @return {Deferred} The promise for when all the required data is loaded.
+ */
+Visualizer.prototype.getSoundCloudAudio = function(url) {
+    var self = this;
+    var $dfd = new $.Deferred();
+    var audio = $("#audio").get(0);
+    var requestUrl = "https://api.soundcloud.com/resolve.json?url="+url+"&client_id="+SC_CLIENT_ID;
+
+    // now we will get the audio information.
+    $.when (
+        $.ajax({
+            type: "GET",
+            url: requestUrl
+        })
+    ).done(
+        $.proxy(function(data, textStatus) {
+            // update the audio source
+            audio.src = "https://api.soundcloud.com/tracks/"+data.id+"/stream?client_id="+SC_CLIENT_ID;
+
+            // store the audio information
+            self.options.scInfo[data.id] = {
+                title: data.title,
+                author: data.user.username,
+                thumbnail: data.artwork_url,
+                media: audio
+            };
+            // resolve the deferred
+            $dfd.resolve(data.id);
+        }, self)
+    ).fail(
+        $.proxy(function() {
+            // resolve the deferred
+            $dfd.resolve();
+        }, self)
     );
     return $dfd.promise();
 };
