@@ -60,8 +60,14 @@ window.Visualizer = function(options) {
         self.attachAnalyser(audio);
         */
     }
+    function testAudio() {
+        var audio = $("#audio").get(0);
+        audio.src = "resources/audio/Squirly Girl.mp3";
+        self.attachAnalyser(audio);
+    }
     //testYouTube();
-    testSoundCloud();
+    //testSoundCloud();
+    testAudio();
 };
 /**
  * Initializes the the provided audio file.
