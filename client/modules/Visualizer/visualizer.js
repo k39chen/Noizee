@@ -4,7 +4,7 @@ var MIN_DECIBELS = -90;
 var MAX_DECIBELS = 10;
 var SC_CLIENT_ID = "09af4ac81403d0e0b85d7edd30a4fd57";
 
-var context = new AudioContext();
+window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
 /**
  * The visualizer controller. Manages any of the actions that are
@@ -179,7 +179,8 @@ Visualizer.prototype.getYouTubeVideo = function(url) {
     $.when (
         $.ajax({
             type: "GET",
-            url: "https://gdata.youtube.com/feeds/api/videos/"+id+"?v=2"
+            url: "https://gdata.youtube.com/feeds/api/videos/"+id+"?v=2",
+            dataType: "jsonp"
         })
     ).done(
         $.proxy(function(id, data, textStatus) {
@@ -227,7 +228,8 @@ Visualizer.prototype.getSoundCloudAudio = function(url) {
     $.when (
         $.ajax({
             type: "GET",
-            url: requestUrl
+            url: requestUrl,
+            dataType: "jsonp"
         })
     ).done(
         $.proxy(function(data, textStatus) {
