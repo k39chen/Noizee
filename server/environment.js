@@ -1,3 +1,3 @@
 Meteor.startup(function() {
-    console.log("NOIZEE has started up");    
+    console.log("NOIZEE has started up");
 });
