@@ -1,5 +1,5 @@
 var NUM_DATA_POINTS = 1024;
-var SMOOTHING_CONSTANT = 0.5;
+var SMOOTHING_CONSTANT = 0.80;
 var MIN_DECIBELS = -90;
 var MAX_DECIBELS = 10;
 var SC_CLIENT_ID = "09af4ac81403d0e0b85d7edd30a4fd57";
@@ -54,11 +54,6 @@ window.Visualizer = function(options) {
             var info = self.options.scInfo[trackId];
             self.attachAnalyser(info.media);
         });
-        /*
-        var audio = $("#audio").get(0);
-        audio.src = "https://api.soundcloud.com/tracks/169508644/stream?client_id=09af4ac81403d0e0b85d7edd30a4fd57";
-        self.attachAnalyser(audio);
-        */
     }
     function testAudio() {
         var audio = $("#audio").get(0);
@@ -95,6 +90,13 @@ Visualizer.prototype.attachAnalyser = function(mediaElement) {
     // does its work.
     var frequencyData = new Uint8Array(analyser.frequencyBinCount);
 
+    // set number of bars
+    setTimeout(function() {
+        console.log("here?");
+        analyser.fftSize = 256 * 2;
+        frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    }, 4000);
+
     // create an interval listener to render the frame
     function renderFrame() {
         requestAnimationFrame(renderFrame);
@@ -125,7 +127,7 @@ Visualizer.prototype.renderFrequencyData = function(data) {
     context.fillRect(0,0,width,height);
 
     _.each(data, function(datum) {
-        barHeight = datum * 2;
+        barHeight = datum;
 
         // draw the bar
         context.fillStyle = self.options.barColor;
