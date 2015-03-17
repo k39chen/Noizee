@@ -61,7 +61,7 @@ window.Visualizer = function(options) {
     $(window).resize($.proxy(self.handleResize,self));
 
     function testYouTube() {
-        var url = "https://www.youtube.com/watch?v=d01XRSB-7dA";
+        var url = "https://www.youtube.com/watch?v=zH1Z03rno4Y";
         $.when(
             self.getYouTubeVideo(url)
         ).then(function(videoId) {
@@ -89,7 +89,7 @@ window.Visualizer = function(options) {
     }
     //testYouTube();
     //testSoundCloud();
-    testAudio();
+    //testAudio();
 };
 /*========================================================================*
  * ANALYSER BOOTSTRAP
@@ -253,10 +253,12 @@ Visualizer.prototype.renderFrequencyData = function(frequencyData) {
 
     // draw the frequency spectrum
     _.each(frequencyData, function(datum) {
-        barHeight = datum;
+        barHeight = Math.max(datum,2);
 
         // draw the bar
         canvas.fillStyle = self.options.themeColor;
+        canvas.shadowBlur = 10;
+        canvas.shadowColor = self.options.themeColor;
         canvas.fillRect(barOffset, height * 0.5 - barHeight * 0.75, barWidth, barHeight);
 
         // compute the offset appropriately
@@ -282,6 +284,7 @@ Visualizer.prototype.renderVolumeData = function(volume) {
     canvas.lineWidth = 2;
     canvas.strokeStyle = self.options.themeColor;
     canvas.stroke();
+    canvas.closePath();
 };
 /*========================================================================*
  * THIRD PARTY DATA FETCHING
