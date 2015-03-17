@@ -16,6 +16,13 @@ window.ControlPanel = function(options) {
     // assign the control panel element
     self.element = $("#control-panel");
     
+    // initialize all sliders
+    self.element.find(".slider").slider({
+        value: 30,
+        orientation: "vertical",
+        range: "min",
+        animate: true
+    });
     // open the control panel by default
     self.open();
 }
