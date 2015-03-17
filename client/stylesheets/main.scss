@@ -1,9 +1,16 @@
+// import vendor styles
 @import "vendor/_compass";
 
+// import base styles
 @import "base/_reset";
 @import "base/_colors";
 @import "base/_fonts";
 @import "base/_main";
 
+// import widget styles
+@import "../widgets/Slider/_slider";
+
+// import module styles
 @import "../modules/ControlPanel/_controlpanel";
 @import "../modules/Visualizer/_visualizer";
+

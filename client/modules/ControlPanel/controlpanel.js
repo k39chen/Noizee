@@ -3,6 +3,7 @@
  * inacted upon the control panel and reacts accordingly.
  *
  * @class ControlPanel
+ * @param options {Object} Options for this controller.
  */
 window.ControlPanel = function(options) {
     var self = this;
@@ -10,22 +11,24 @@ window.ControlPanel = function(options) {
     // create an initial set of options and then subsequently
     // merge it with user-provided options.
     this.options = $.extend({
-        // ...
+        sliders: []
     }, options);
     
     // assign the control panel element
     self.element = $("#control-panel");
-    
-    // initialize all sliders
-    self.element.find(".slider").slider({
-        value: 30,
-        orientation: "vertical",
-        range: "min",
-        animate: true
+
+    // go through all sliders in the control panel and initialize them    
+    self.element.find(".slider").each(function(index) {
+        var $slider = $(this);
+
+        // bind this slider to this container element
+        self.options.sliders[index] = new Slider($slider, {
+            icon: $slider.data("icon")
+        });
     });
     // open the control panel by default
     self.open();
-}
+};
 /**
  * Opens the control panel.
  *

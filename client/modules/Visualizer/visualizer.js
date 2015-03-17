@@ -8,6 +8,7 @@ window.requestAnimationFrame = window.requestAnimationFrame || window.webkitRequ
  * inacted upon the visualizer and reacts accordingly.
  *
  * @class Visualizer
+ * @param options {Object} Options for this controller.
  */
 window.Visualizer = function(options) {
     var self = this;
