@@ -19,6 +19,7 @@ window.Visualizer = function(options) {
         ytInfo: {},
         scInfo: {},
         canvas: null,
+        background: null,
         backgroundColor: "#444",
         themeColor: "#37CCDF",
 
@@ -61,8 +62,12 @@ window.Visualizer = function(options) {
     self.handleResize();
     $(window).resize($.proxy(self.handleResize,self));
 
+    // create our background image first
+    self.options.background = new Image();
+    self.options.background.src = "http://cdn01.wallconvert.com/_media/wallpapers_1920x1080/1/2/freckled-brunette-18991.jpg";
+
     function testYouTube() {
-        var url = "https://www.youtube.com/watch?v=3QUXrLe8EV4";
+        var url = "https://www.youtube.com/watch?v=PKBWYPk2XK4";
         $.when(
             self.getYouTubeVideo(url)
         ).then(function(videoId) {
@@ -90,7 +95,7 @@ window.Visualizer = function(options) {
     }
     //testYouTube();
     //testSoundCloud();
-    //testAudio();
+    testAudio();
 };
 /*========================================================================*
  * ANALYSER BOOTSTRAP
@@ -229,6 +234,8 @@ Visualizer.prototype.renderVisualization = function(frequencyData, volume1, volu
     // clear the canvas
     canvas.fillStyle = self.options.backgroundColor;
     canvas.fillRect(0,0,width,height);
+
+    canvas.drawImage(self.options.background,0,0);
 
     // render the frequency data
     self.renderFrequencyData(frequencyData);
