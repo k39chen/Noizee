@@ -1,21 +1,58 @@
 .Slider {
     overflow: hidden;
     display: block;
-    padding: 12px 24px;
     float: left;
+    padding-top: 1.0em;
+    margin-right: 24px;
     
-    .slider-el {
-    }
     .icon {
         @include transition(all 0.2s);
         cursor: pointer;
+        color: $dark-gray;
         display: block;
-        margin-top: 4px;
-        color: $neon-blue;
         font-size: 1.5em;
+    }
+    .slider-el {
+        @include transition(opacity 0.2s);
+        cursor: pointer;
+        margin: 0.5em auto;
+        border: solid 4px rgba(0,0,0,0.5);
+        background: $theme;
+        @include border-radius(12px);
+        @include opacity(0.7);
 
-        &.hover {
-            @include text-shadow(0 0 13px $neon-blue);
+        .ui-slider-range {
+            background: $theme;
+            @include border-radius(12px);
+        }
+        .ui-slider-handle {
+            @include transition(background-color 0.5s);
+            cursor: pointer;
+            @include border-radius(50%);
+            background: $white;
+            outline: none;
+            border-color: transparent;
+            width: 1.1em;
+            height: 1.1em;
+            margin-left: 0.1em;
+
+            &.ui-state-hover {
+                background: darken($white,10%);
+            }
+        }
+    }
+    .value {
+        color: $darker-white;
+    }
+    &:last-child {
+        margin-right: 0;
+    }
+    &.hover {
+        .icon {
+            color: $theme;
+        }
+        .slider-el {
+            @include opacity(1.0);
         }
     }
 }

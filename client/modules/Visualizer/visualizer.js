@@ -39,7 +39,7 @@ window.Visualizer = function(options) {
                 data: null,
                 config: {
                     fftSize: 2048,
-                    smoothingTimeConstant: 0.8
+                    smoothingTimeConstant: 0.3
                 }
             },
             volume2: {
@@ -62,7 +62,7 @@ window.Visualizer = function(options) {
     $(window).resize($.proxy(self.handleResize,self));
 
     function testYouTube() {
-        var url = "https://www.youtube.com/watch?v=zH1Z03rno4Y";
+        var url = "https://www.youtube.com/watch?v=3QUXrLe8EV4";
         $.when(
             self.getYouTubeVideo(url)
         ).then(function(videoId) {

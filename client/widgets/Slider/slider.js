@@ -12,7 +12,11 @@ window.Slider = function($el, options) {
     // create an initial set of options and then subsequently
     // merge it with user-provided options.
     this.options = $.extend({
-        label: "Sample Label"
+        label: "Sample Label",
+        min: 0,
+        value: 30,
+        max: 100,
+        handleChange: $.noop
     }, options);
     
     // assign a reference to the DOM element
@@ -32,13 +36,18 @@ window.Slider = function($el, options) {
     );
     // initialize the sliders
     self.element.find(".slider-el").slider({
-        value: 30,
+        min: self.options.min,
+        value: self.options.value,
+        max: self.options.max,
         orientation: "vertical",
         range: "min",
-        animate: true
+        animate: true,
+        slide: function(ev,ui) {
+            if (_.isFunction(self.options.handleChange)) {
+                self.options.handleChange(ui.value);
+            }
+        }
     });
-    // bind events for this widget
-    self.bindEvents();
 };
 /**
  * Destroys and unbinds the slider to its original state.
@@ -52,9 +61,6 @@ Slider.prototype.destroy = function() {
     // unbind the slider widget
     $el.find(".slider").slider("destroy");
 
-    // unbind all the events for this widget
-    self.unbindEvents();
-
     // empty out the element
     $el.empty();
 
@@ -67,37 +73,16 @@ Slider.prototype.destroy = function() {
 Template.slider.events({
     // Mouse event handlers for the icon
     //-------------------------------------------------------------------------
-    "click .icon": function() {
-        // ...
-    },
-    "mouseover .icon": function(ev) {
+    "mouseover .slider-el": function(ev) {
         var $el = $(ev.target);
-        $el.addClass("hover");
+        var $slider = $el.closest(".Slider");
+
+        $slider.addClass("hover");
     },
-    "mouseout .icon": function(ev) {
+    "mouseout .slider-el": function(ev) {
         var $el = $(ev.target);
-        $el.removeClass("hover");
+        var $slider = $el.closest(".Slider");
+
+        $slider.removeClass("hover");
     }
 });
-
-/**
- * Binds all the events for this widget.
- *
- * @method bindEvents
- */
-Slider.prototype.bindEvents = function() {
-    var self = this;
-    var $el = $(self.element);
-
-    // add hover event handlers for the icon
-    $el.find(".icon").hover();
-};
-/**
- * Unbinds all the events for this widget.
- *
- * @method bindEvents
- */
-Slider.prototype.unbindEvents = function() {
-    var self = this;
-    var $el = $(self.element);
-};

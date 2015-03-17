@@ -23,7 +23,8 @@ window.ControlPanel = function(options) {
 
         // bind this slider to this container element
         self.options.sliders[index] = new Slider($slider, {
-            icon: $slider.data("icon")
+            icon: $slider.data("icon"),
+            value: _.random(10,100)
         });
     });
     // open the control panel by default

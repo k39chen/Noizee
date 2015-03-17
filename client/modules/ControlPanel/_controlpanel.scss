@@ -32,6 +32,10 @@ $sidebarWidth: 320px;
         height: 1px;
         background: $light-black;
     }
+    .slider-group {
+        overflow: hidden;
+        padding: 32px;
+    }
     // animate the control panel into view
     &.open {
         @include opacity(0.8);
