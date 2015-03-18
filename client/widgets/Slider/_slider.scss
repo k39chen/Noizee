@@ -16,8 +16,8 @@
         @include transition(opacity 0.2s);
         cursor: pointer;
         margin: 0.5em auto;
-        border: solid 4px rgba(0,0,0,0.5);
-        background: $theme;
+        border: solid 4px rgba(0,0,0,0.6);
+        background: $light-gray;
         @include border-radius(12px);
         @include opacity(0.7);
 
@@ -32,9 +32,9 @@
             background: $white;
             outline: none;
             border-color: transparent;
-            width: 1.1em;
-            height: 1.1em;
-            margin-left: 0.1em;
+            width: 0.9em;
+            height: 0.9em;
+            margin-left: 0.2em;
 
             &.ui-state-hover {
                 background: darken($white,10%);

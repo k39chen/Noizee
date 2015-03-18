@@ -105,12 +105,13 @@ window.Visualizer = function(options) {
         audio.src = "resources/audio/Squirly Girl.mp3";
         self.attachAnalysers(audio);
     }
-    testYouTube();
+    //testYouTube();
     //testSoundCloud();
     //testAudio();
 
     // initialize our background (and render it)
-    self.setBackground("http://i.imgur.com/eKFGuyR.jpg");
+    //self.options.background.config.align = IMAGE_FIT.ALIGN_LEFT;
+    //self.setBackground("http://i.imgur.com/eKFGuyR.jpg");
 };
 /*========================================================================*
  * ANALYSER BOOTSTRAP
