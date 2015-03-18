@@ -105,12 +105,12 @@ window.Visualizer = function(options) {
         audio.src = "resources/audio/Squirly Girl.mp3";
         self.attachAnalysers(audio);
     }
-    //testYouTube();
+    testYouTube();
     //testSoundCloud();
     //testAudio();
-    
+
     // initialize our background (and render it)
-    self.setBackground("http://i.imgur.com/qhMaqYT.jpg");
+    self.setBackground("http://i.imgur.com/eKFGuyR.jpg");
 };
 /*========================================================================*
  * ANALYSER BOOTSTRAP
@@ -478,6 +478,20 @@ Visualizer.prototype.handleResize = function() {
 Visualizer.prototype.setBackground = function(url, fill) {
     var self = this;
 
+    // if the url is null, then we will invalidate everything
+    if (_.isNull(url)) {
+        self.options.background.image = null;
+        self.options.background.source = {
+            width: 0,
+            height: 0
+        };
+        self.options.background.x = 0;
+        self.options.background.y = 0;
+        self.options.background.width = 0;
+        self.options.background.height = 0;
+        self.options.background.fill = fill;
+        return;
+    }
     // invalidate our previous source
     self.options.background.image = null;
 
@@ -491,6 +505,7 @@ Visualizer.prototype.setBackground = function(url, fill) {
     // create our background image first
     self.options.background.image = new Image();
     self.options.background.image.src = url;
+    self.options.background.image.crossOrigin = "Anonymous";
 
     // once the image has been loaded, we can compute how to position
     // it on the canvas for the best appearance.
@@ -509,5 +524,11 @@ Visualizer.prototype.setBackground = function(url, fill) {
         ));
         // render the background once we've initialized everything
         self.renderBackground();
+
+        // after all this is done, let the control panel create a blurred version of this image as its
+        // background, which will be handled with this event handler
+        if (!_.isNull(controlPanel)) {
+            controlPanel.element.trigger("background-set", self.options.background);
+        }
     };
 };

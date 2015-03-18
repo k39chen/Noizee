@@ -2,13 +2,18 @@
 var fullscreenElement = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement;
 var fullscreenEnabled = document.fullscreenEnabled || document.mozFullScreenEnabled || document.webkitFullscreenEnabled;
 
+// since these are global objects, lets just represent them as such here (but reduce the number of global variables)
+window.visualizer = null;
+window.controlPanel = null;
+
 // bootstrap our application
 window.onload = function() {
-    // initialize the sidebar
-    var controlPanel = new ControlPanel();
-
     // initialize the visualizer
-    var visualizer = new Visualizer({
+    visualizer = new Visualizer({
+        // ...
+    });
+    // initialize the sidebar
+    controlPanel = new ControlPanel({
         // ...
     });
     // bind the full screen toggle button

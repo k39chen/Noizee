@@ -1,15 +1,26 @@
 $sidebarWidth: 320px;
 
+#blurred-bg {
+    position: absolute;
+    overflow: hidden;
+    top: 100%;
+    bottom: 0;
+    width: 100%;
+    
+    img {
+        position: absolute;
+        @include filter(blur(15px));
+    }
+}
 #control-panel {
-    @include transition(all 0.3s);
     @include box-sizing(border-box);
     position: absolute;
-    top: 50%;
+    overflow: hidden;
+    top: 100%;
     left: 0;
     bottom: 0;
     right: 0;
     background: $black;
-    @include opacity(0);
     text-align: center;
 
     .hero {
@@ -35,9 +46,5 @@ $sidebarWidth: 320px;
     .slider-group {
         overflow: hidden;
         padding: 32px;
-    }
-    // animate the control panel into view
-    &.open {
-        @include opacity(0.8);
     }
 }

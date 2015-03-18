@@ -27,6 +27,22 @@ window.ControlPanel = function(options) {
             value: _.random(10,100)
         });
     });
+    // bind some custom event listeners for when the visualizer sets its background
+    self.element.bind("background-set", $.proxy(function(ev,background) {
+        var $bg = $("#blurred-bg");
+        var $img = $bg.find("img")
+            .attr("data-x", background.x)
+            .attr("data-y", background.y)
+            .attr("data-width", background.width)
+            .attr("data-height", background.height)
+            .attr("src", background.source.url)
+            .css({
+                left: background.x,
+                top: background.y - self.element.position().top,
+                width: background.width,
+                height: background.height
+            });
+    }, self));
     // open the control panel by default
     self.open();
 };
@@ -37,7 +53,21 @@ window.ControlPanel = function(options) {
  */
 ControlPanel.prototype.open = function() {
     var $el = $(this.element);
+    var $bg = $("#blurred-bg");
+    var $img = $bg.find("img");
+
     $el.addClass("open");
+
+    $el.animate({top: "100%",opacity: 0}).stop().animate({top: "50%",opacity: 0.8},300);
+    $bg.animate({top: "100%"}).stop().animate({top: "50%"}, {
+        duration: 300,
+        step: function(now, tween) {
+            $img.css({top: Math.ceil($img.data("y") - $(this).offset().top)});
+        },
+        complete: function() {
+            $img.css({top: Math.ceil($img.data("y") - $(this).offset().top)});  
+        }
+    });
 };
 /**
  * Closes the control panel.
@@ -46,5 +76,19 @@ ControlPanel.prototype.open = function() {
  */
 ControlPanel.prototype.close = function() {
     var $el = $(this.element);
+    var $bg = $("#blurred-bg");
+    var $img = $bg.find("img");
+
     $el.removeClass("open");
+
+    $el.animate({top: "50%",opacity: 0.8}).stop().animate({top: "100%",opacity: 0},300);
+    $bg.animate({top: "50%"}).stop().animate({top: "100%"}, {
+        duration: 300,
+        step: function(now, tween) {
+            $img.css({top: Math.ceil($img.data("y") - $(this).offset().top)});
+        },
+        complete: function() {
+            $img.css({top: Math.ceil($img.data("y") - $(this).offset().top)});  
+        }
+    });
 };
