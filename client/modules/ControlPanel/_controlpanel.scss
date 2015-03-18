@@ -21,23 +21,7 @@ $sidebarWidth: 320px;
     bottom: 0;
     right: 0;
     background: $black;
-    text-align: center;
 
-    .hero {
-        padding: 24px;
-        .title {
-            font-size: 3.0em;
-            font-family: "HelveticaNeueUltLt";
-            margin-bottom: 12px;
-
-            b {
-                color: $neon-blue;
-            }
-        }
-        .caption {
-            color: $gray;
-        }
-    }
     .separator {
         width: 100%;
         height: 1px;

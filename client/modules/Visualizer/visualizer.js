@@ -102,7 +102,7 @@ window.Visualizer = function(options) {
     }
     function testAudio() {
         var audio = $("#audio").get(0);
-        audio.src = "resources/audio/Squirly Girl.mp3";
+        audio.src = "resources/audio/TheFatRat-Unity.mp3";
         self.attachAnalysers(audio);
     }
     //testYouTube();
@@ -110,8 +110,8 @@ window.Visualizer = function(options) {
     //testAudio();
 
     // initialize our background (and render it)
-    //self.options.background.config.align = IMAGE_FIT.ALIGN_LEFT;
-    //self.setBackground("http://i.imgur.com/eKFGuyR.jpg");
+    self.options.background.config.align = IMAGE_FIT.ALIGN_LEFT;
+    self.setBackground("http://i.imgur.com/eKFGuyR.jpg");
 };
 /*========================================================================*
  * ANALYSER BOOTSTRAP
@@ -181,6 +181,9 @@ Visualizer.prototype.configureAnalyser = function(type,config) {
     var analyser = self.options.analysers[type].analyser;
     var analyserConfig = self.options.analysers[type].config;
 
+    // if the analyser hasn't been defined yet, then nothing to do here
+    if (_.isNull(analyser)) return;
+
     // based on the specific kind of configuration, we'll have to
     // modify the analyser in a different way.
     _.each(config, function(value, name) {
@@ -222,28 +225,70 @@ Visualizer.prototype.updateAnalyserData = function() {
     volume1Analyser.getByteFrequencyData(self.options.analysers.volume1.data);
     volume2Analyser.getByteFrequencyData(self.options.analysers.volume2.data);
 
-    // use this frequency data to render the visualizer
-    self.renderVisualization(
-        self.options.analysers.frequency.data,
-        self.computeAverageVolume(self.options.analysers.volume1.data),
-        self.computeAverageVolume(self.options.analysers.volume2.data)
-    );
+    // determine if we want to render a mini visualizer for the splash screen
+    // or render the full-fledged one on the app
+    var $splash = $("#splash-screen");
+    var $miniViz = $splash.find("#mini-visualization");
+
+    if ($splash.length && !$splash.data("is-closed") && $miniViz.length > 0) {
+        var miniCanvas = $miniViz.get(0).getContext("2d");
+        self.renderMiniVisualization(miniCanvas, self.options.analysers.frequency.data);
+    } else {
+        // use this frequency data to render the visualizer
+        self.renderVisualization(
+            self.options.canvas,
+            self.options.analysers.frequency.data,
+            self.computeAverageVolume(self.options.analysers.volume1.data),
+            self.computeAverageVolume(self.options.analysers.volume2.data)
+        );
+    }
     // update the our analyser data on the specified interval
     requestAnimationFrame(function() {
         self.updateAnalyserData();
     });
 };
 /**
+ * Renders a miniature version of the visualization.
+ *
+ * @method renderMiniVisualization
+ * @param canvas {Canvas} The HTML5 Canvas element to render the visualization on.
+ * @param frequencyData {Array} The list of frequency data to render.
+ */
+Visualizer.prototype.renderMiniVisualization = function(canvas, frequencyData) {
+    var self = this;
+    var width = canvas.canvas.width;
+    var height = canvas.canvas.height;
+    var barWidth = width / frequencyData.length * 2.5;
+    var barHeight;
+    var barOffset = 0;
+
+    // clear the canvas
+    canvas.fillStyle = "#222";
+    canvas.fillRect(0,0,width,height);
+
+    // draw the frequency spectrum
+    _.each(frequencyData, function(datum) {
+        barHeight = Math.max(datum,2) / 4;
+
+        // draw the bar
+        canvas.fillStyle = self.options.themeColor;
+        canvas.fillRect(barOffset, height - barHeight, barWidth, barHeight);
+
+        // compute the offset appropriately
+        barOffset = barOffset + barWidth + 4;
+    });
+};
+/**
  * Renders the visualization.
  *
  * @method renderVisualization
+ * @param canvas {Canvas} The HTML5 Canvas element to render the visualization on.
  * @param frequencyData {Array} The list of frequency data to render.
  * @param volume1 {Number} The average volume in the first channel.
  * @param volume2 {Number} The average volume in the second channel.
  */
-Visualizer.prototype.renderVisualization = function(frequencyData, volume1, volume2) {
+Visualizer.prototype.renderVisualization = function(canvas, frequencyData, volume1, volume2) {
     var self = this;
-    var canvas = self.options.canvas;
     var width = self.element.width;
     var height = self.element.height;
 
@@ -252,38 +297,39 @@ Visualizer.prototype.renderVisualization = function(frequencyData, volume1, volu
     canvas.fillRect(0,0,width,height);
 
     // render the background image
-    self.renderBackground();
+    self.renderBackground(canvas);
 
     // render the frequency data
-    self.renderFrequencyData(frequencyData);
+    self.renderFrequencyData(canvas,frequencyData);
 
     // render the volume data
-    self.renderVolumeData(volume1);
-    self.renderVolumeData(volume2);
+    self.renderVolumeData(canvas,volume1);
+    self.renderVolumeData(canvas,volume2);
 };
 /**
  * Renders the visualization background.
  *
  * @method renderBackground
+ * @param canvas {Canvas} The HTML5 Canvas element to render the visualization on.
  */
-Visualizer.prototype.renderBackground = function() {
+Visualizer.prototype.renderBackground = function(canvas) {
     var self = this;
     var bg = self.options.background;
 
     // draw the image onto the canvas
     if (!_.isNull(bg.image)) {
-        self.options.canvas.drawImage(bg.image, bg.x, bg.y, bg.width, bg.height);
+        canvas.drawImage(bg.image, bg.x, bg.y, bg.width, bg.height);
     }
 };
 /**
  * Renders the visualizer with the provided frequency data.
  *
  * @method renderFrequencyData
+ * @param canvas {Canvas} The HTML5 Canvas element to render the visualization on.
  * @param frequencyData {Array} The list of frequency data to render.
  */
-Visualizer.prototype.renderFrequencyData = function(frequencyData) {
+Visualizer.prototype.renderFrequencyData = function(canvas,frequencyData) {
     var self = this;
-    var canvas = self.options.canvas;
     var width = self.element.width;
     var height = self.element.height;
     var barWidth = width / frequencyData.length * 2.5;
@@ -298,7 +344,7 @@ Visualizer.prototype.renderFrequencyData = function(frequencyData) {
         canvas.fillStyle = self.options.themeColor;
         canvas.shadowBlur = 10;
         canvas.shadowColor = self.options.themeColor;
-        canvas.fillRect(barOffset, height * 0.5 - barHeight * 0.75, barWidth, barHeight);
+        canvas.fillRect(barOffset, height * 0.5 - barHeight * 0.5, barWidth, barHeight);
 
         // compute the offset appropriately
         barOffset = barOffset + barWidth + 4;
@@ -308,11 +354,11 @@ Visualizer.prototype.renderFrequencyData = function(frequencyData) {
  * Renders the volume data.
  *
  * @method renderVolumeData
+ * @param canvas {Canvas} The HTML5 Canvas element to render the visualization on.
  * @param volume {Number} The average volume.
  */
-Visualizer.prototype.renderVolumeData = function(volume) {
+Visualizer.prototype.renderVolumeData = function(canvas,volume) {
     var self = this;
-    var canvas = self.options.canvas;
     var width = self.element.width;
     var height = self.element.height;
     var radius = volume / 2;
@@ -524,12 +570,17 @@ Visualizer.prototype.setBackground = function(url, fill) {
             $(window).height()
         ));
         // render the background once we've initialized everything
-        self.renderBackground();
+        self.renderBackground(self.options.canvas);
 
         // after all this is done, let the control panel create a blurred version of this image as its
         // background, which will be handled with this event handler
         if (!_.isNull(controlPanel)) {
             controlPanel.element.trigger("background-set", self.options.background);
+        }
+        // if the splash screen exists, then trigger it for the splash screen as well
+        var $splash = $("#splash-screen");
+        if ($splash.length > 0) {
+            $splash.trigger("background-set", self.options.background);
         }
     };
 };

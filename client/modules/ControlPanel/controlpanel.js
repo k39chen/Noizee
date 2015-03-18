@@ -43,8 +43,6 @@ window.ControlPanel = function(options) {
                 height: background.height
             });
     }, self));
-    // open the control panel by default
-    self.open();
 };
 /**
  * Opens the control panel.

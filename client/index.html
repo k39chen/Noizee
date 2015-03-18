@@ -6,4 +6,19 @@
     {{> visualizer}}
     {{> controlPanel}}
     <i id="fullscreen-toggle" class="fa fa-expand"></i>
+
+
+    {{> splashScreen}}
 </body>
+
+<template name="splashScreen">
+<img id="splash-blur" />
+<div id="splash-screen">
+    <div class="hero">
+        <canvas id="mini-visualization"></canvas>
+        <div class="title">Welcome to <b>Noizee</b></div>
+        <div class="caption">See the music you listen to.</div>
+        <i id="proceed-btn" class="fa fa-fw fa-chevron-right"></i>
+    </div>
+</div>
+</template>

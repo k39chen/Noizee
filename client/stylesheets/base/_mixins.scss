@@ -1,0 +1,17 @@
+@mixin icon-button {
+    @include transition(color 0.5s, background-color 0.5s);
+    cursor: pointer;
+    width: 2.0em;
+    height: 2.0em;
+    line-height: 2.0em;
+    text-align: center;
+    font-size: 1.25em;
+    background: rgba(0,0,0,0.3);
+    color: $dark-gray;
+    @include border-radius(50%);
+    
+    &.hover {
+        background: rgba(0,0,0,0.5);
+        color: $white;
+    }
+}
