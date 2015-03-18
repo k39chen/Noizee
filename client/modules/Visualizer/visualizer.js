@@ -461,6 +461,12 @@ Visualizer.prototype.handleResize = function() {
     // update the width of the canvas
     self.element.width = $(window).width();
     self.element.height = $(window).height();
+
+    // update the background
+    self.setBackground(
+        self.options.background.source.url,
+        self.options.background.fill
+    );
 };
 /**
  * Sets the background image for the canvas.
