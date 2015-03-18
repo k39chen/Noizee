@@ -19,10 +19,26 @@ window.Visualizer = function(options) {
         ytInfo: {},
         scInfo: {},
         canvas: null,
-        background: null,
-        backgroundColor: "#444",
         themeColor: "#37CCDF",
 
+        // defined the background information for rendering        
+        background: {
+            source: {
+                url: null,
+                width: 0,
+                height: 0
+            },
+            config: {
+                scale: IMAGE_FIT.BEST_FILL,
+                align: IMAGE_FIT.ALIGN_CENTER
+            },
+            image: null,
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            fill: "#444"
+        },
         // tracks configuration and data changes for the registered frequency analyser
         analysers: {
             frequency: {
@@ -62,12 +78,8 @@ window.Visualizer = function(options) {
     self.handleResize();
     $(window).resize($.proxy(self.handleResize,self));
 
-    // create our background image first
-    self.options.background = new Image();
-    self.options.background.src = "http://cdn01.wallconvert.com/_media/wallpapers_1920x1080/1/2/freckled-brunette-18991.jpg";
-
     function testYouTube() {
-        var url = "https://www.youtube.com/watch?v=PKBWYPk2XK4";
+        var url = "https://www.youtube.com/watch?v=ShLTI5xgoFA";
         $.when(
             self.getYouTubeVideo(url)
         ).then(function(videoId) {
@@ -95,7 +107,10 @@ window.Visualizer = function(options) {
     }
     //testYouTube();
     //testSoundCloud();
-    testAudio();
+    //testAudio();
+    
+    // initialize our background (and render it)
+    self.setBackground("http://i.imgur.com/qhMaqYT.jpg");
 };
 /*========================================================================*
  * ANALYSER BOOTSTRAP
@@ -232,10 +247,11 @@ Visualizer.prototype.renderVisualization = function(frequencyData, volume1, volu
     var height = self.element.height;
 
     // clear the canvas
-    canvas.fillStyle = self.options.backgroundColor;
+    canvas.fillStyle = self.options.background.fill;
     canvas.fillRect(0,0,width,height);
 
-    canvas.drawImage(self.options.background,0,0);
+    // render the background image
+    self.renderBackground();
 
     // render the frequency data
     self.renderFrequencyData(frequencyData);
@@ -243,6 +259,20 @@ Visualizer.prototype.renderVisualization = function(frequencyData, volume1, volu
     // render the volume data
     self.renderVolumeData(volume1);
     self.renderVolumeData(volume2);
+};
+/**
+ * Renders the visualization background.
+ *
+ * @method renderBackground
+ */
+Visualizer.prototype.renderBackground = function() {
+    var self = this;
+    var bg = self.options.background;
+
+    // draw the image onto the canvas
+    if (!_.isNull(bg.image)) {
+        self.options.canvas.drawImage(bg.image, bg.x, bg.y, bg.width, bg.height);
+    }
 };
 /**
  * Renders the visualizer with the provided frequency data.
@@ -261,7 +291,7 @@ Visualizer.prototype.renderFrequencyData = function(frequencyData) {
 
     // draw the frequency spectrum
     _.each(frequencyData, function(datum) {
-        barHeight = Math.max(datum,2);
+        barHeight = Math.max(datum,2) * 1.5;
 
         // draw the bar
         canvas.fillStyle = self.options.themeColor;
@@ -431,4 +461,47 @@ Visualizer.prototype.handleResize = function() {
     // update the width of the canvas
     self.element.width = $(window).width();
     self.element.height = $(window).height();
+};
+/**
+ * Sets the background image for the canvas.
+ *
+ * @method setBackground
+ * @param url {String} The url of the image to set on the canvas.
+ * @param fill {String} The hex for the fill color (Optional parameter).
+ */
+Visualizer.prototype.setBackground = function(url, fill) {
+    var self = this;
+
+    // invalidate our previous source
+    self.options.background.image = null;
+
+    // update our background image information
+    self.options.background.source.url = url;
+
+    // update our background color if one was specified here
+    if (!_.isUndefined(fill)) {
+        self.options.background.fill = fill;
+    }
+    // create our background image first
+    self.options.background.image = new Image();
+    self.options.background.image.src = url;
+
+    // once the image has been loaded, we can compute how to position
+    // it on the canvas for the best appearance.
+    self.options.background.image.onload = function() {
+        self.options.background.source.width = self.options.background.image.width;
+        self.options.background.source.height = self.options.background.image.height;
+
+        // compute the best
+        $.extend(self.options.background, computeImageFit(
+            self.options.background.config.scale,
+            self.options.background.config.align,
+            self.options.background.source.width,
+            self.options.background.source.height,
+            $(window).width(),
+            $(window).height()
+        ));
+        // render the background once we've initialized everything
+        self.renderBackground();
+    };
 };
