@@ -80,6 +80,7 @@ window.Visualizer = function(options) {
 
     function testYouTube() {
         var url = "https://www.youtube.com/watch?v=ShLTI5xgoFA";
+        //url = "https://www.youtube.com/watch?v=RA_vxjTdw7A";
         $.when(
             self.getYouTubeVideo(url)
         ).then(function(videoId) {
@@ -87,6 +88,7 @@ window.Visualizer = function(options) {
             var video = $("#video").get(0);
             video.src = info.url;
             self.attachAnalysers(video);
+            splash.initVisualization();
         });
     }
     function testSoundCloud() {
@@ -98,14 +100,16 @@ window.Visualizer = function(options) {
             var audio = $("#audio").get(0);
             audio.src = info.url;
             self.attachAnalysers(audio);
+            splash.initVisualization();
         });
     }
     function testAudio() {
         var audio = $("#audio").get(0);
         audio.src = "resources/audio/TheFatRat-Unity.mp3";
         self.attachAnalysers(audio);
+        splash.initVisualization();
     }
-    //testYouTube();
+    testYouTube();
     //testSoundCloud();
     //testAudio();
 
@@ -230,7 +234,7 @@ Visualizer.prototype.updateAnalyserData = function() {
     var $splash = $("#splash-screen");
     var $miniViz = $splash.find("#mini-visualization");
 
-    if ($splash.length && !$splash.data("is-closed") && $miniViz.length > 0) {
+    if (!_.isNull(splash) && $splash.length > 0 && $miniViz.length > 0) {
         var miniCanvas = $miniViz.get(0).getContext("2d");
         self.renderMiniVisualization(miniCanvas, self.options.analysers.frequency.data);
     } else {
@@ -578,9 +582,8 @@ Visualizer.prototype.setBackground = function(url, fill) {
             controlPanel.element.trigger("background-set", self.options.background);
         }
         // if the splash screen exists, then trigger it for the splash screen as well
-        var $splash = $("#splash-screen");
-        if ($splash.length > 0) {
-            $splash.trigger("background-set", self.options.background);
+        if (!_.isNull(splash)) {
+            splash.element.trigger("background-set", self.options.background);
         }
     };
 };
